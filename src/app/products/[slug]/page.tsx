@@ -1,0 +1,41 @@
+import type { Metadata } from "next";
+import { ProductDetailClient } from "@/components/commerce/product-detail-client";
+import { getProductBySlug, products } from "@/lib/data";
+
+type ProductDetailProps = {
+  params: Promise<{ slug: string }>;
+};
+
+export function generateStaticParams() {
+  return products.map((product) => ({ slug: product.slug }));
+}
+
+export async function generateMetadata({ params }: ProductDetailProps): Promise<Metadata> {
+  const { slug } = await params;
+  const product = getProductBySlug(slug);
+
+  if (!product) {
+    return {
+      title: "Product",
+      description: "AVI FirstBreath Store product detail."
+    };
+  }
+
+  return {
+    title: product.name,
+    description: product.shortDescription,
+    keywords: product.tags,
+    openGraph: {
+      title: product.name,
+      description: product.shortDescription,
+      images: [product.images[0]]
+    }
+  };
+}
+
+export default async function ProductDetailPage({ params }: ProductDetailProps) {
+  const { slug } = await params;
+  const initialProduct = getProductBySlug(slug);
+
+  return <ProductDetailClient slug={slug} initialProduct={initialProduct} />;
+}
