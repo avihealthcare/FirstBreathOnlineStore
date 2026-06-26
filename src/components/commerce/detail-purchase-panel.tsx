@@ -5,6 +5,7 @@ import { Minus, Plus, ShoppingCart } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ProductEnquiryActions } from "@/components/commerce/product-enquiry-actions";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/cart-store";
 import type { Product } from "@/types";
@@ -64,6 +65,7 @@ export function DetailPurchasePanel({ product }: { product: Product }) {
           <ShoppingCart className="h-4 w-4" aria-hidden="true" />
           Add to Cart
         </Button>
+        <ProductEnquiryActions product={product} variant={variant} quantity={quantity} />
         <Button asChild variant="secondary">
           <Link href="/products">Continue Browsing</Link>
         </Button>

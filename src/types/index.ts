@@ -159,6 +159,53 @@ export type DiscountCoupon = {
   isActive: boolean;
 };
 
+export type StoreSettings = {
+  id?: string;
+  companyName: string;
+  companyAddress: string;
+  contactEmail: string;
+  phoneNumber: string;
+  whatsappNumber: string;
+  gstNumber?: string;
+  footerText: string;
+  privacyPolicy: string;
+  termsAndConditions: string;
+  shippingPolicy: string;
+  returnPolicy: string;
+};
+
+export type LeadType = "BULK_QUOTE" | "WHATSAPP_ENQUIRY";
+
+export type LeadStatus =
+  | "NEW_QUOTE_REQUEST"
+  | "WHATSAPP_ENQUIRY"
+  | "CONTACTED"
+  | "QUALIFIED"
+  | "CONVERTED"
+  | "CLOSED";
+
+export type AdminLead = {
+  id: string;
+  leadNumber: string;
+  type: LeadType;
+  status: LeadStatus;
+  productName: string;
+  variant?: string;
+  name: string;
+  mobile: string;
+  email?: string;
+  companyName?: string;
+  cityState?: string;
+  estimatedQuantity?: number;
+  purchaseType?: string;
+  expectedTimeline?: string;
+  additionalRequirements?: string;
+  fileName?: string;
+  whatsappMessage?: string;
+  notificationStatus: string;
+  createdAt: string;
+};
+
 export type AdminCustomer = {
   id: string;
   fullName: string;
@@ -185,6 +232,7 @@ export type AdminDashboardData = {
   totalProducts: number;
   totalOrders: number;
   pendingEnquiries: number;
+  totalLeads: number;
   revenue: number;
   lowStock: Product[];
   recentOrders: AdminOrder[];
@@ -195,8 +243,10 @@ export type AdminInitialData = {
   categories: Category[];
   customers: AdminCustomer[];
   orders: AdminOrder[];
+  leads: AdminLead[];
   hero: HeroSettings;
   paymentOptions: PaymentOption[];
   coupons: DiscountCoupon[];
+  storeSettings: StoreSettings;
   dashboard: AdminDashboardData;
 };

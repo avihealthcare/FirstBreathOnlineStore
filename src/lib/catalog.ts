@@ -1,8 +1,9 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { bulkBanner, categories as seedCategories, mockOrders, products as seedProducts, testimonials } from "@/lib/data";
-import { defaultCoupons, defaultHeroSettings, defaultPaymentOptions } from "@/lib/defaults";
+import { defaultCoupons, defaultHeroSettings, defaultPaymentOptions, defaultStoreSettings } from "@/lib/defaults";
 import type {
+  AdminLead,
   AdminCustomer,
   AdminDashboardData,
   AdminInitialData,
@@ -13,7 +14,8 @@ import type {
   DiscountCoupon,
   HeroSettings,
   PaymentOption,
-  Product
+  Product,
+  StoreSettings
 } from "@/types";
 
 const productInclude = {
@@ -290,28 +292,150 @@ export async function getDiscountCoupons() {
   }
 }
 
+export async function getStoreSettings() {
+  try {
+    const settings = await prisma.storeSetting.findFirst({ orderBy: { updatedAt: "desc" } });
+    if (!settings) return defaultStoreSettings;
+    return {
+      id: settings.id,
+      companyName: settings.companyName,
+      companyAddress: settings.companyAddress,
+      contactEmail: settings.contactEmail,
+      phoneNumber: settings.phoneNumber,
+      whatsappNumber: settings.whatsappNumber ?? "",
+      gstNumber: settings.gstNumber ?? "",
+      footerText: settings.footerText,
+      privacyPolicy: settings.privacyPolicy,
+      termsAndConditions: settings.termsAndConditions,
+      shippingPolicy: settings.shippingPolicy,
+      returnPolicy: settings.returnPolicy
+    } satisfies StoreSettings;
+  } catch {
+    return defaultStoreSettings;
+  }
+}
+
+export function mapLeadStatus(status: string): AdminLead["status"] {
+  const statusMap: Record<string, AdminLead["status"]> = {
+    NEW_QUOTE_REQUEST: "NEW_QUOTE_REQUEST",
+    WHATSAPP_ENQUIRY: "WHATSAPP_ENQUIRY",
+    CONTACTED: "CONTACTED",
+    QUALIFIED: "QUALIFIED",
+    CONVERTED: "CONVERTED",
+    CLOSED: "CLOSED"
+  };
+  return statusMap[status] ?? "NEW_QUOTE_REQUEST";
+}
+
+export function mapLeadType(type: string): AdminLead["type"] {
+  return type === "WHATSAPP_ENQUIRY" ? "WHATSAPP_ENQUIRY" : "BULK_QUOTE";
+}
+
+export function mapLead(lead: {
+  id: string;
+  leadNumber: string;
+  type: string;
+  status: string;
+  productName: string;
+  variant: string | null;
+  name: string;
+  mobile: string;
+  email: string | null;
+  companyName: string | null;
+  cityState: string | null;
+  estimatedQuantity: number | null;
+  purchaseType: string | null;
+  expectedTimeline: string | null;
+  additionalRequirements: string | null;
+  fileName: string | null;
+  whatsappMessage: string | null;
+  notificationStatus: string;
+  createdAt: Date;
+}): AdminLead {
+  return {
+    id: lead.id,
+    leadNumber: lead.leadNumber,
+    type: mapLeadType(lead.type),
+    status: mapLeadStatus(lead.status),
+    productName: lead.productName,
+    variant: lead.variant ?? undefined,
+    name: lead.name,
+    mobile: lead.mobile,
+    email: lead.email ?? undefined,
+    companyName: lead.companyName ?? undefined,
+    cityState: lead.cityState ?? undefined,
+    estimatedQuantity: lead.estimatedQuantity ?? undefined,
+    purchaseType: lead.purchaseType ?? undefined,
+    expectedTimeline: lead.expectedTimeline ?? undefined,
+    additionalRequirements: lead.additionalRequirements ?? undefined,
+    fileName: lead.fileName ?? undefined,
+    whatsappMessage: lead.whatsappMessage ?? undefined,
+    notificationStatus: lead.notificationStatus,
+    createdAt: lead.createdAt.toISOString()
+  };
+}
+
+export async function getAdminLeads() {
+  try {
+    const leads = await prisma.$queryRawUnsafe<
+      {
+        id: string;
+        leadNumber: string;
+        type: string;
+        status: string;
+        productName: string;
+        variant: string | null;
+        name: string;
+        mobile: string;
+        email: string | null;
+        companyName: string | null;
+        cityState: string | null;
+        estimatedQuantity: number | null;
+        purchaseType: string | null;
+        expectedTimeline: string | null;
+        additionalRequirements: string | null;
+        fileName: string | null;
+        whatsappMessage: string | null;
+        notificationStatus: string;
+        createdAt: Date;
+      }[]
+    >(
+      `SELECT "id", "leadNumber", "type"::text AS "type", "status"::text AS "status", "productName", "variant", "name", "mobile", "email", "companyName", "cityState", "estimatedQuantity", "purchaseType", "expectedTimeline", "additionalRequirements", "fileName", "whatsappMessage", "notificationStatus", "createdAt"
+       FROM "Lead"
+       ORDER BY "createdAt" DESC
+       LIMIT 200`
+    );
+    return leads.map(mapLead);
+  } catch {
+    return [];
+  }
+}
+
 export async function getAdminInitialData(): Promise<AdminInitialData> {
-  const [products, categories, orders, customers, hero, paymentOptions, coupons] = await Promise.all([
+  const [products, categories, orders, customers, leads, hero, paymentOptions, coupons, storeSettings] = await Promise.all([
     getCatalogProducts(),
     getCatalogCategories(),
     getAdminOrders(),
     getAdminCustomers(),
+    getAdminLeads(),
     getHomepageContent(),
     getPaymentOptions(),
-    getDiscountCoupons()
+    getDiscountCoupons(),
+    getStoreSettings()
   ]);
   const lowStock = products.filter((product) => product.stockQuantity <= 25);
   const revenue = orders.reduce((sum, order) => sum + order.total, 0);
   const dashboard: AdminDashboardData = {
     totalProducts: products.length,
     totalOrders: orders.length,
-    pendingEnquiries: orders.filter((order) => order.status === "Pending").length,
+    pendingEnquiries: orders.filter((order) => order.status === "Pending").length + leads.filter((lead) => lead.status === "NEW_QUOTE_REQUEST").length,
+    totalLeads: leads.length,
     revenue,
     lowStock,
     recentOrders: orders.slice(0, 5)
   };
 
-  return { products, categories, customers, orders, hero, paymentOptions, coupons, dashboard };
+  return { products, categories, customers, orders, leads, hero, paymentOptions, coupons, storeSettings, dashboard };
 }
 
 export async function getAdminOrders() {

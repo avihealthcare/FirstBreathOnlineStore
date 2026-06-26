@@ -15,8 +15,18 @@ export async function POST(request: Request) {
   }
 
   const email = parsed.data.email.trim().toLowerCase();
+  const authRows = await prisma.$queryRawUnsafe<{ id: string; passwordHash: string | null }[]>(
+    `SELECT "id", "passwordHash" FROM "Customer" WHERE lower("email") = lower($1) LIMIT 1`,
+    email
+  );
+  const authCustomer = authRows[0];
+
+  if (!authCustomer || !(await verifyPassword(parsed.data.password, authCustomer.passwordHash))) {
+    return NextResponse.json({ ok: false, error: "Invalid email or password." }, { status: 401 });
+  }
+
   const customer = await prisma.customer.findUnique({
-    where: { email },
+    where: { id: authCustomer.id },
     include: {
       addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }] },
       orders: {
@@ -26,7 +36,7 @@ export async function POST(request: Request) {
     }
   });
 
-  if (!customer || !(await verifyPassword(parsed.data.password, customer.passwordHash))) {
+  if (!customer) {
     return NextResponse.json({ ok: false, error: "Invalid email or password." }, { status: 401 });
   }
 

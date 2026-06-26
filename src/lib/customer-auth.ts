@@ -52,7 +52,29 @@ export async function getCurrentCustomer() {
   });
 }
 
-export function mapCustomerProfile(customer: NonNullable<Awaited<ReturnType<typeof getCurrentCustomer>>>): CustomerProfile {
+type CustomerForProfile = {
+  id: string;
+  fullName: string | null;
+  mobile: string | null;
+  email: string | null;
+  hospitalName: string | null;
+  gstNumber: string | null;
+  billingAddress: string | null;
+  savedProductSlugs: string[];
+  recentlyPurchasedSlugs: string[];
+  addresses: {
+    id: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    pincode: string;
+    country: string;
+    isDefault: boolean;
+  }[];
+};
+
+export function mapCustomerProfile(customer: CustomerForProfile): CustomerProfile {
   return {
     id: customer.id,
     fullName: customer.fullName ?? "",

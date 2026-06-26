@@ -55,6 +55,20 @@ enum BannerPosition {
   CHECKOUT
 }
 
+enum LeadType {
+  BULK_QUOTE
+  WHATSAPP_ENQUIRY
+}
+
+enum LeadStatus {
+  NEW_QUOTE_REQUEST
+  WHATSAPP_ENQUIRY
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  CLOSED
+}
+
 model User {
   id            String   @id @default(cuid())
   name          String?
@@ -148,6 +162,7 @@ model Product {
   similarTo        Product[]        @relation("SimilarProducts")
   cartItems        CartItem[]
   orderItems       OrderItem[]
+  leads            Lead[]
   seoSettings      SEOSetting[]
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
@@ -249,6 +264,37 @@ model OrderItem {
   quantity    Int
   unitPrice   Decimal @db.Decimal(10, 2)
   total       Decimal @db.Decimal(10, 2)
+}
+
+model Lead {
+  id                     String     @id @default(cuid())
+  leadNumber             String     @unique
+  type                   LeadType
+  status                 LeadStatus
+  productId              String?
+  product                Product?   @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName            String
+  variant                String?
+  name                   String
+  mobile                 String
+  email                  String?
+  companyName            String?
+  cityState              String?
+  estimatedQuantity      Int?
+  purchaseType           String?
+  expectedTimeline       String?
+  additionalRequirements String?
+  fileName               String?
+  fileUrl                String?
+  whatsappMessage        String?
+  notificationStatus     String     @default("PENDING")
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([productId])
+  @@index([createdAt])
 }
 
 model Testimonial {

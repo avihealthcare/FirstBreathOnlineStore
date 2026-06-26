@@ -18,20 +18,29 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: false, error: parsed.error.errors[0]?.message ?? "Invalid profile details." }, { status: 400 });
   }
 
-  const customer = await prisma.customer.update({
+  await prisma.$executeRawUnsafe(
+    `UPDATE "Customer"
+     SET "fullName" = $1, "email" = $2, "mobile" = $3, "hospitalName" = $4, "gstNumber" = $5, "updatedAt" = CURRENT_TIMESTAMP
+     WHERE "id" = $6`,
+    parsed.data.fullName,
+    parsed.data.email.trim().toLowerCase(),
+    parsed.data.mobile?.trim() || null,
+    parsed.data.hospitalName?.trim() || null,
+    parsed.data.gstNumber?.trim() || null,
+    customerId
+  );
+
+  const customer = await prisma.customer.findUnique({
     where: { id: customerId },
-    data: {
-      fullName: parsed.data.fullName,
-      email: parsed.data.email.trim().toLowerCase(),
-      mobile: parsed.data.mobile?.trim() || null,
-      hospitalName: parsed.data.hospitalName?.trim() || null,
-      gstNumber: parsed.data.gstNumber?.trim() || null
-    },
     include: {
       addresses: { orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }] },
       orders: { include: { items: { include: { product: true } } } }
     }
   });
+
+  if (!customer) {
+    return NextResponse.json({ ok: false, error: "Customer profile not found." }, { status: 404 });
+  }
 
   return NextResponse.json({ ok: true, customer: mapCustomerProfile(customer) });
 }

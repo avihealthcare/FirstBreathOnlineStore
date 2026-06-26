@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { defaultCoupons, defaultHeroSettings, defaultPaymentOptions } from "../src/lib/defaults";
+import { defaultCoupons, defaultHeroSettings, defaultPaymentOptions, defaultStoreSettings } from "../src/lib/defaults";
 import { hashPassword } from "../src/lib/password";
 
 const prisma = new PrismaClient();
@@ -109,6 +109,7 @@ const products = [
 ];
 
 async function main() {
+  const { id: _storeSettingId, ...storeSettingsSeed } = defaultStoreSettings;
   const adminPasswordHash = await hashPassword(process.env.SEED_ADMIN_PASSWORD ?? "FirstBreath@123");
   await prisma.user.upsert({
     where: { email: process.env.SEED_ADMIN_EMAIL ?? "admin@avihealthcare.com" },
@@ -272,19 +273,10 @@ async function main() {
 
   await prisma.storeSetting.upsert({
     where: { id: "seed-store-settings" },
-    update: {},
+    update: storeSettingsSeed,
     create: {
       id: "seed-store-settings",
-      companyAddress: "AVI Healthcare Pvt Ltd, India",
-      contactEmail: "sales@avihealthcare.com",
-      phoneNumber: "+91 98765 43210",
-      whatsappNumber: "+91 98765 43210",
-      gstNumber: "GST placeholder",
-      footerText: "For hospital, clinical, and professional healthcare use.",
-      privacyPolicy: "Customer and order data should be handled according to privacy and data protection best practices.",
-      termsAndConditions: "Product specifications, compatibility, and availability should be confirmed before purchase.",
-      shippingPolicy: "Dispatch timelines depend on stock status and order confirmation.",
-      returnPolicy: "Returns are subject to product condition, batch, and procurement terms."
+      ...storeSettingsSeed
     }
   });
 }

@@ -1,4 +1,4 @@
-import type { DiscountCoupon, HeroSettings, PaymentOption } from "@/types";
+import type { DiscountCoupon, HeroSettings, PaymentOption, StoreSettings } from "@/types";
 
 export const defaultHeroSettings: HeroSettings = {
   eyebrow: "AVI Healthcare Pvt Ltd",
@@ -64,3 +64,18 @@ export const defaultCoupons: DiscountCoupon[] = [
     isActive: true
   }
 ];
+
+export const defaultStoreSettings: StoreSettings = {
+  id: "seed-store-settings",
+  companyName: "AVI Healthcare Pvt Ltd",
+  companyAddress: "AVI Healthcare Pvt Ltd, India",
+  contactEmail: "sales@avihealthcare.com",
+  phoneNumber: "+91 98765 43210",
+  whatsappNumber: "+91 98765 43210",
+  gstNumber: "GST placeholder",
+  footerText: "For hospital, clinical, and professional healthcare use.",
+  privacyPolicy: "Customer and order data should be handled according to privacy and data protection best practices.",
+  termsAndConditions: "Product specifications, compatibility, and availability should be confirmed before purchase.",
+  shippingPolicy: "Dispatch timelines depend on stock status and order confirmation.",
+  returnPolicy: "Returns are subject to product condition, batch, and procurement terms."
+};

@@ -30,6 +30,37 @@ export const customerSignupSchema = customerLoginSchema.extend({
   gstNumber: z.string().optional()
 });
 
+const indianMobileSchema = z
+  .string()
+  .trim()
+  .regex(/^(\+91[\s-]?)?[6-9]\d{9}$/, "Enter a valid Indian mobile number");
+
+export const bulkQuoteSchema = z.object({
+  productId: z.string().optional(),
+  productName: z.string().min(2, "Product name is required"),
+  variant: z.string().optional(),
+  name: z.string().min(2, "Name is required"),
+  mobile: indianMobileSchema,
+  email: z.string().email("Enter a valid email"),
+  companyName: z.string().min(2, "Company/hospital name is required"),
+  cityState: z.string().optional(),
+  estimatedQuantity: z.coerce.number().int().positive("Estimated quantity is required"),
+  purchaseType: z.string().min(2, "Purchase type is required"),
+  expectedTimeline: z.string().optional(),
+  additionalRequirements: z.string().optional(),
+  fileName: z.string().optional()
+});
+
+export const whatsappEnquirySchema = z.object({
+  productId: z.string().optional(),
+  productName: z.string().min(2, "Product name is required"),
+  variant: z.string().optional(),
+  name: z.string().min(2, "Name is required"),
+  mobile: indianMobileSchema,
+  companyName: z.string().optional(),
+  quantity: z.coerce.number().int().positive("Quantity is required")
+});
+
 export const adminLoginSchema = z.object({
   email: z.string().email("Enter a valid admin email"),
   password: z.string().min(8, "Enter the admin password")
@@ -38,6 +69,8 @@ export const adminLoginSchema = z.object({
 export type CustomerLoginInput = z.infer<typeof customerLoginSchema>;
 export type CustomerSignupInput = z.infer<typeof customerSignupSchema>;
 export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
+export type BulkQuoteInput = z.infer<typeof bulkQuoteSchema>;
+export type WhatsappEnquiryInput = z.infer<typeof whatsappEnquirySchema>;
 
 export const adminProductSchema = z.object({
   name: z.string().min(2),
@@ -84,5 +117,20 @@ export const customerProfileSchema = z.object({
   gstNumber: z.string().optional()
 });
 
+export const storeSettingsSchema = z.object({
+  companyName: z.string().min(2),
+  companyAddress: z.string().min(5),
+  contactEmail: z.string().email(),
+  phoneNumber: z.string().min(8),
+  whatsappNumber: z.string().optional(),
+  gstNumber: z.string().optional(),
+  footerText: z.string().min(5),
+  privacyPolicy: z.string().min(10),
+  termsAndConditions: z.string().min(10),
+  shippingPolicy: z.string().min(10),
+  returnPolicy: z.string().min(10)
+});
+
 export type CategoryInput = z.infer<typeof categorySchema>;
 export type CustomerProfileInput = z.infer<typeof customerProfileSchema>;
+export type StoreSettingsInput = z.infer<typeof storeSettingsSchema>;

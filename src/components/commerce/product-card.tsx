@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Heart, ShoppingCart, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ProductEnquiryActions } from "@/components/commerce/product-enquiry-actions";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/cart-store";
 import { useCustomerStore } from "@/store/customer-store";
@@ -74,6 +75,9 @@ export function ProductCard({ product }: { product: Product }) {
           <Button size="icon" aria-label={`Add ${product.name} to cart`} onClick={() => addItem(product)}>
             <ShoppingCart className="h-4 w-4" aria-hidden="true" />
           </Button>
+        </div>
+        <div className="mt-3">
+          <ProductEnquiryActions product={product} compact />
         </div>
       </div>
     </motion.article>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Mail, MapPin, Phone, ShieldCheck } from "lucide-react";
+import { getStoreSettings } from "@/lib/catalog";
 import { categories, trustNotes } from "@/lib/data";
 
 const policies = [
@@ -9,7 +10,9 @@ const policies = [
   { label: "Return Policy", href: "/policies/returns" }
 ];
 
-export function Footer() {
+export async function Footer() {
+  const settings = await getStoreSettings();
+
   return (
     <footer className="mt-16 border-t border-border bg-white">
       <div className="container grid gap-8 py-10 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
@@ -21,13 +24,13 @@ export function Footer() {
           </p>
           <div className="mt-5 grid gap-2 text-sm text-slate-600">
             <span className="inline-flex items-center gap-2">
-              <Phone className="h-4 w-4 text-avi-teal" /> +91 98765 43210
+              <Phone className="h-4 w-4 text-avi-teal" /> {settings.phoneNumber}
             </span>
             <span className="inline-flex items-center gap-2">
-              <Mail className="h-4 w-4 text-avi-teal" /> sales@avihealthcare.com
+              <Mail className="h-4 w-4 text-avi-teal" /> {settings.contactEmail}
             </span>
             <span className="inline-flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-avi-teal" /> AVI Healthcare Pvt Ltd, India
+              <MapPin className="h-4 w-4 text-avi-teal" /> {settings.companyAddress}
             </span>
           </div>
         </div>
@@ -85,7 +88,7 @@ export function Footer() {
       </div>
 
       <div className="container flex flex-col gap-2 py-5 text-xs text-slate-500 md:flex-row md:items-center md:justify-between">
-        <p>© {new Date().getFullYear()} AVI Healthcare Pvt Ltd. All rights reserved.</p>
+        <p>© {new Date().getFullYear()} {settings.companyName}. All rights reserved.</p>
         <p>This website does not provide medical advice.</p>
       </div>
     </footer>

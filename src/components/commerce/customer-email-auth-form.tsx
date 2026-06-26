@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
-import { Building2, LockKeyhole, Mail, UserRound } from "lucide-react";
+import { Building2, Eye, EyeOff, LockKeyhole, Mail, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +31,7 @@ export function CustomerEmailAuthForm({ mode, onAuthenticated }: CustomerEmailAu
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const isSignup = mode === "signup";
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -108,7 +109,23 @@ export function CustomerEmailAuthForm({ mode, onAuthenticated }: CustomerEmailAu
           <Input value={email} onChange={(event) => setEmail(event.target.value)} type="email" placeholder="orders@hospital.com" className="pl-9" required autoComplete="email" />
         </AuthField>
         <AuthField label="Password" icon={LockKeyhole}>
-          <Input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="Minimum 8 characters" className="pl-9" required autoComplete={isSignup ? "new-password" : "current-password"} />
+          <Input
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            type={showPassword ? "text" : "password"}
+            placeholder="Minimum 8 characters"
+            className="pl-9 pr-11"
+            required
+            autoComplete={isSignup ? "new-password" : "current-password"}
+          />
+          <button
+            type="button"
+            aria-label={showPassword ? "Hide password" : "Show password"}
+            className="absolute right-3 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-md text-slate-500 hover:bg-slate-100 hover:text-avi-ink"
+            onClick={() => setShowPassword((current) => !current)}
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
+          </button>
         </AuthField>
 
         {error ? <p className="rounded-lg bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p> : null}

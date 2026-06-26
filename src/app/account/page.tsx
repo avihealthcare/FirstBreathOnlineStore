@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, PackageCheck, RefreshCcw, UserRound } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LogOut, MapPin, PackageCheck, RefreshCcw, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CustomerEmailAuthForm } from "@/components/commerce/customer-email-auth-form";
@@ -11,9 +12,11 @@ import { formatCurrency } from "@/lib/utils";
 import { useCustomerStore } from "@/store/customer-store";
 
 export default function AccountPage() {
+  const router = useRouter();
   const customer = useCustomerStore((state) => state.customer);
   const isLoggedIn = useCustomerStore((state) => state.isLoggedIn);
   const orders = useCustomerStore((state) => state.orders);
+  const clearCustomer = useCustomerStore((state) => state.logout);
 
   if (!isLoggedIn || !customer) {
     return (
@@ -25,6 +28,13 @@ export default function AccountPage() {
 
   const savedProducts = products.filter((product) => customer.savedProductSlugs.includes(product.slug)).slice(0, 2);
   const recentOrder = orders[0];
+
+  async function logout() {
+    await fetch("/api/customer/logout", { method: "POST" }).catch(() => undefined);
+    clearCustomer();
+    router.push("/");
+    router.refresh();
+  }
 
   return (
     <div className="container py-8">
@@ -39,6 +49,10 @@ export default function AccountPage() {
           </Button>
           <Button asChild>
             <Link href="/products">Shop Products</Link>
+          </Button>
+          <Button type="button" variant="ghost" onClick={logout}>
+            <LogOut className="h-4 w-4" />
+            Logout
           </Button>
         </div>
       </div>

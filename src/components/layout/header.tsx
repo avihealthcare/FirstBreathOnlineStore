@@ -4,13 +4,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
-import { Menu, Search, ShoppingCart, UserRound, X } from "lucide-react";
+import { LogOut, Menu, Search, ShoppingCart, UserRound, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { categories } from "@/lib/data";
+import { defaultStoreSettings } from "@/lib/defaults";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/store/cart-store";
 import { useCustomerStore } from "@/store/customer-store";
+import type { StoreSettings } from "@/types";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -26,12 +28,20 @@ export function Header() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [settings, setSettings] = useState<StoreSettings>(defaultStoreSettings);
   const itemCount = useCartStore((state) => state.getItemCount());
   const isLoggedIn = useCustomerStore((state) => state.isLoggedIn);
   const setCustomer = useCustomerStore((state) => state.setCustomer);
+  const clearCustomer = useCustomerStore((state) => state.logout);
 
   useEffect(() => {
     setMounted(true);
+    fetch("/api/store/settings")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data?.settings) setSettings(data.settings);
+      })
+      .catch(() => undefined);
     if (isLoggedIn) return;
     fetch("/api/customer/me")
       .then((response) => (response.ok ? response.json() : null))
@@ -49,16 +59,23 @@ export function Header() {
     setOpen(false);
   }
 
+  async function logout() {
+    await fetch("/api/customer/logout", { method: "POST" }).catch(() => undefined);
+    clearCustomer();
+    setOpen(false);
+    router.refresh();
+  }
+
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur">
       <div className="hidden border-b border-border bg-slate-50 text-xs text-avi-ink lg:block">
         <div className="container flex h-9 items-center justify-between">
           <div className="flex items-center gap-5">
-            <span>+91 98765 43210</span>
-            <span>sales@avihealthcare.com</span>
+            <span>{settings.phoneNumber}</span>
+            <span>{settings.contactEmail}</span>
             <span>Bulk enquiry support</span>
           </div>
-          <span>For hospital, clinical, and professional healthcare use.</span>
+          <span>{settings.footerText}</span>
         </div>
       </div>
 
@@ -125,6 +142,12 @@ export function Header() {
             {isLoggedIn ? "Account" : "Login"}
           </Link>
         </Button>
+        {isLoggedIn ? (
+          <Button type="button" variant="ghost" size="sm" className="hidden lg:inline-flex" onClick={logout}>
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
+        ) : null}
       </div>
 
       <div className="container pb-3 lg:hidden">
@@ -178,6 +201,16 @@ export function Header() {
               >
                 {isLoggedIn ? "My Account" : "Login / Signup"}
               </Link>
+              {isLoggedIn ? (
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="flex items-center gap-2 rounded-lg px-3 py-3 text-left text-sm font-semibold text-avi-ink hover:bg-avi-mist"
+                >
+                  <LogOut className="h-4 w-4" aria-hidden="true" />
+                  Logout
+                </button>
+              ) : null}
             </nav>
 
             <div className="mt-6 rounded-xl bg-avi-mist p-4">

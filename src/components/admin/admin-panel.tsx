@@ -18,12 +18,14 @@ import type { AdminProductInput, CategoryInput } from "@/lib/validation";
 import type {
   AdminCustomer,
   AdminInitialData,
+  AdminLead,
   AdminOrder,
   Category,
   DiscountCoupon,
   HeroSettings,
   PaymentOption,
-  Product
+  Product,
+  StoreSettings
 } from "@/types";
 
 type ApiResult<T> = { ok: boolean; error?: string } & T;
@@ -45,9 +47,11 @@ export function AdminPanel({ initialData }: { initialData: AdminInitialData }) {
   const [categories, setCategories] = useState<Category[]>(initialData.categories);
   const [customers, setCustomers] = useState<AdminCustomer[]>(initialData.customers);
   const [orders, setOrders] = useState<AdminOrder[]>(initialData.orders);
+  const [leads, setLeads] = useState<AdminLead[]>(initialData.leads);
   const [hero, setHero] = useState<HeroSettings>(initialData.hero);
   const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>(initialData.paymentOptions);
   const [coupons, setCoupons] = useState<DiscountCoupon[]>(initialData.coupons);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(initialData.storeSettings);
   const [savedMessage, setSavedMessage] = useState("");
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
 
@@ -56,12 +60,13 @@ export function AdminPanel({ initialData }: { initialData: AdminInitialData }) {
     return {
       totalProducts: products.length,
       totalOrders: orders.length,
-      pendingEnquiries: orders.filter((order) => order.status === "Pending").length,
+      pendingEnquiries: orders.filter((order) => order.status === "Pending").length + leads.filter((lead) => lead.status === "NEW_QUOTE_REQUEST").length,
+      totalLeads: leads.length,
       revenue: orders.reduce((sum, order) => sum + order.total, 0),
       lowStock,
       recentOrders: orders.slice(0, 5)
     };
-  }, [orders, products]);
+  }, [leads, orders, products]);
 
   async function logout() {
     await fetch("/api/admin/logout", { method: "POST" });
@@ -147,6 +152,24 @@ export function AdminPanel({ initialData }: { initialData: AdminInitialData }) {
     setSavedMessage(`${data.order.orderNumber} updated.`);
   }
 
+  async function updateLead(id: string, status: AdminLead["status"]) {
+    const data = await requestJson<{ lead: AdminLead }>(`/api/admin/leads/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status })
+    });
+    setLeads((current) => current.map((lead) => (lead.id === id ? data.lead : lead)));
+    setSavedMessage(`${data.lead.leadNumber} updated.`);
+  }
+
+  async function saveStoreSettings(settings: StoreSettings) {
+    const data = await requestJson<{ settings: StoreSettings }>("/api/admin/settings", {
+      method: "PATCH",
+      body: JSON.stringify({ settings })
+    });
+    setStoreSettings(data.settings);
+    setSavedMessage("Store settings saved.");
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[250px_1fr]">
       <AdminSidebar active={active} onChange={setActive} />
@@ -178,6 +201,7 @@ export function AdminPanel({ initialData }: { initialData: AdminInitialData }) {
         ) : null}
         {active === "categories" ? <CategoriesSection categories={categories} onSave={saveCategory} onDelete={deleteCategory} /> : null}
         {active === "customers" ? <CustomersSection customers={customers} /> : null}
+        {active === "leads" ? <LeadsSection leads={leads} onUpdate={updateLead} /> : null}
         {active === "orders" ? <OrdersSection orders={orders} onUpdate={updateOrder} /> : null}
         {active === "payments" ? (
           <PaymentsSection paymentOptions={paymentOptions} onSave={savePaymentOption} onDelete={deletePaymentOption} />
@@ -186,7 +210,7 @@ export function AdminPanel({ initialData }: { initialData: AdminInitialData }) {
         {active === "seo" ? <SeoSection products={products} categories={categories} /> : null}
         {active === "banners" ? <BannersSection /> : null}
         {active === "testimonials" ? <TestimonialsSection /> : null}
-        {active === "settings" ? <SettingsSection /> : null}
+        {active === "settings" ? <SettingsSection settings={storeSettings} onSave={saveStoreSettings} /> : null}
         {active === "preview" ? <PreviewSection mode={previewMode} setMode={setPreviewMode} /> : null}
       </section>
     </div>
@@ -201,6 +225,7 @@ function adminTitle(section: AdminSection) {
     seo: "SEO Setup",
     categories: "Category Management",
     customers: "Customers",
+    leads: "Lead Management",
     orders: "Order Management",
     payments: "Payment Options",
     coupons: "Discount Coupons",
@@ -216,15 +241,24 @@ function Dashboard({
   stats,
   customers
 }: {
-  stats: { totalProducts: number; totalOrders: number; pendingEnquiries: number; revenue: number; lowStock: Product[]; recentOrders: AdminOrder[] };
+  stats: {
+    totalProducts: number;
+    totalOrders: number;
+    pendingEnquiries: number;
+    totalLeads: number;
+    revenue: number;
+    lowStock: Product[];
+    recentOrders: AdminOrder[];
+  };
   customers: AdminCustomer[];
 }) {
   return (
     <div className="grid gap-5">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
         <Stat label="Total Products" value={stats.totalProducts.toString()} />
         <Stat label="Total Orders" value={stats.totalOrders.toString()} />
         <Stat label="Customers" value={customers.length.toString()} />
+        <Stat label="Leads" value={stats.totalLeads.toString()} />
         <Stat label="Pending Enquiries" value={stats.pendingEnquiries.toString()} />
         <Stat label="Revenue" value={formatCurrency(stats.revenue)} />
       </div>
@@ -591,6 +625,95 @@ function CustomersSection({ customers }: { customers: AdminCustomer[] }) {
   );
 }
 
+function LeadsSection({
+  leads,
+  onUpdate
+}: {
+  leads: AdminLead[];
+  onUpdate: (id: string, status: AdminLead["status"]) => Promise<void>;
+}) {
+  const statuses: AdminLead["status"][] = [
+    "NEW_QUOTE_REQUEST",
+    "WHATSAPP_ENQUIRY",
+    "CONTACTED",
+    "QUALIFIED",
+    "CONVERTED",
+    "CLOSED"
+  ];
+
+  return (
+    <AdminCard title="Quote Requests & WhatsApp Enquiries">
+      <div className="overflow-auto">
+        <table className="w-full min-w-[1120px] text-left text-sm">
+          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              <th className="px-4 py-3">Lead</th>
+              <th className="px-4 py-3">Product</th>
+              <th className="px-4 py-3">Customer</th>
+              <th className="px-4 py-3">Quantity</th>
+              <th className="px-4 py-3">Purchase Type</th>
+              <th className="px-4 py-3">Notes</th>
+              <th className="px-4 py-3">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {leads.map((lead) => (
+              <tr key={lead.id} className="align-top">
+                <td className="px-4 py-3">
+                  <p className="font-black text-avi-ink">{lead.leadNumber}</p>
+                  <Badge variant={lead.type === "WHATSAPP_ENQUIRY" ? "success" : "navy"}>{formatLeadType(lead.type)}</Badge>
+                  <p className="mt-2 text-xs text-slate-500">{new Date(lead.createdAt).toLocaleString("en-IN")}</p>
+                </td>
+                <td className="px-4 py-3">
+                  <p className="font-semibold text-avi-ink">{lead.productName}</p>
+                  <p className="text-xs text-slate-500">{lead.variant || "Standard"}</p>
+                </td>
+                <td className="px-4 py-3 text-slate-600">
+                  <p className="font-semibold text-avi-ink">{lead.name}</p>
+                  <p>{lead.mobile}</p>
+                  <p>{lead.email || "-"}</p>
+                  <p>{lead.companyName || "-"}</p>
+                  <p>{lead.cityState || ""}</p>
+                </td>
+                <td className="px-4 py-3 font-semibold">{lead.estimatedQuantity ?? "-"}</td>
+                <td className="px-4 py-3 text-slate-600">{lead.purchaseType || "-"}</td>
+                <td className="px-4 py-3 text-slate-600">
+                  <p className="max-w-xs whitespace-pre-wrap">{lead.additionalRequirements || lead.whatsappMessage || "-"}</p>
+                  {lead.fileName ? <p className="mt-2 text-xs font-semibold text-avi-teal">File: {lead.fileName}</p> : null}
+                  <p className="mt-2 text-xs text-slate-500">{lead.notificationStatus}</p>
+                </td>
+                <td className="px-4 py-3">
+                  <select
+                    value={lead.status}
+                    onChange={(event) => onUpdate(lead.id, event.target.value as AdminLead["status"])}
+                    className="h-10 rounded-lg border border-input bg-white px-3 text-sm"
+                  >
+                    {statuses.map((status) => (
+                      <option key={status} value={status}>{formatLeadStatus(status)}</option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!leads.length ? <p className="p-4 text-sm text-slate-600">No quote or WhatsApp leads yet.</p> : null}
+      </div>
+    </AdminCard>
+  );
+}
+
+function formatLeadType(type: AdminLead["type"]) {
+  return type === "WHATSAPP_ENQUIRY" ? "WhatsApp Enquiry" : "Bulk Quote";
+}
+
+function formatLeadStatus(status: AdminLead["status"]) {
+  return status
+    .split("_")
+    .map((part) => part.charAt(0) + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function OrdersSection({
   orders,
   onUpdate
@@ -868,22 +991,44 @@ function TestimonialsSection() {
   );
 }
 
-function SettingsSection() {
+function SettingsSection({
+  settings,
+  onSave
+}: {
+  settings: StoreSettings;
+  onSave: (settings: StoreSettings) => Promise<void>;
+}) {
+  const [draft, setDraft] = useState(settings);
+  const [saving, setSaving] = useState(false);
+
+  function update<K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) {
+    setDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  async function save() {
+    setSaving(true);
+    await onSave(draft).finally(() => setSaving(false));
+  }
+
   return (
     <AdminCard title="Store Settings">
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Company Name"><Input defaultValue="AVI Healthcare Pvt Ltd" /></Field>
-        <Field label="Contact Email"><Input defaultValue="sales@avihealthcare.com" /></Field>
-        <Field label="Phone Number"><Input defaultValue="+91 98765 43210" /></Field>
-        <Field label="WhatsApp Number"><Input defaultValue="+91 98765 43210" /></Field>
-        <Field label="GST Number"><Input defaultValue="GST placeholder" /></Field>
-        <Field label="Company Address"><Textarea defaultValue="AVI Healthcare Pvt Ltd, India" /></Field>
-        <Field label="Privacy Policy"><Textarea defaultValue="Customer and order data should be handled according to privacy and data protection best practices." /></Field>
-        <Field label="Terms and Conditions"><Textarea defaultValue="Product specifications, compatibility, and availability should be confirmed before purchase." /></Field>
-        <Field label="Shipping Policy"><Textarea defaultValue="Dispatch timelines depend on stock status and order confirmation." /></Field>
-        <Field label="Return Policy"><Textarea defaultValue="Returns are subject to product condition, batch, and procurement terms." /></Field>
+        <Field label="Company Name"><Input value={draft.companyName} onChange={(event) => update("companyName", event.target.value)} /></Field>
+        <Field label="Contact Email"><Input value={draft.contactEmail} onChange={(event) => update("contactEmail", event.target.value)} /></Field>
+        <Field label="Phone Number"><Input value={draft.phoneNumber} onChange={(event) => update("phoneNumber", event.target.value)} /></Field>
+        <Field label="WhatsApp Number"><Input value={draft.whatsappNumber} onChange={(event) => update("whatsappNumber", event.target.value)} /></Field>
+        <Field label="GST Number"><Input value={draft.gstNumber ?? ""} onChange={(event) => update("gstNumber", event.target.value)} /></Field>
+        <Field label="Footer Trust Text"><Input value={draft.footerText} onChange={(event) => update("footerText", event.target.value)} /></Field>
+        <Field label="Company Address"><Textarea value={draft.companyAddress} onChange={(event) => update("companyAddress", event.target.value)} /></Field>
+        <Field label="Privacy Policy"><Textarea value={draft.privacyPolicy} onChange={(event) => update("privacyPolicy", event.target.value)} /></Field>
+        <Field label="Terms and Conditions"><Textarea value={draft.termsAndConditions} onChange={(event) => update("termsAndConditions", event.target.value)} /></Field>
+        <Field label="Shipping Policy"><Textarea value={draft.shippingPolicy} onChange={(event) => update("shippingPolicy", event.target.value)} /></Field>
+        <Field label="Return Policy"><Textarea value={draft.returnPolicy} onChange={(event) => update("returnPolicy", event.target.value)} /></Field>
       </div>
-      <Button className="mt-4 w-fit" disabled>Settings Save Coming Soon</Button>
+      <Button className="mt-4 w-fit" onClick={save} disabled={saving}>
+        <Save className="h-4 w-4" />
+        {saving ? "Saving..." : "Save Store Settings"}
+      </Button>
     </AdminCard>
   );
 }

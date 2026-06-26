@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
+import crypto from "crypto";
 import { CUSTOMER_COOKIE, mapCustomerProfile, signCustomerSession } from "@/lib/customer-auth";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
@@ -21,21 +23,42 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "An account already exists for this email." }, { status: 409 });
   }
 
-  const passwordHash = await hashPassword(parsed.data.password);
-  const customer = await prisma.customer.create({
-    data: {
-      fullName: parsed.data.fullName,
+  let customer;
+  try {
+    const passwordHash = await hashPassword(parsed.data.password);
+    const customerId = `customer-${crypto.randomUUID()}`;
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO "Customer" ("id", "fullName", "mobile", "email", "passwordHash", "hospitalName", "gstNumber", "savedProductSlugs", "recentlyPurchasedSlugs", "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, ARRAY[]::TEXT[], ARRAY[]::TEXT[], CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      customerId,
+      parsed.data.fullName,
+      parsed.data.mobile?.trim() || null,
       email,
       passwordHash,
-      mobile: parsed.data.mobile?.trim() || null,
-      hospitalName: parsed.data.hospitalName,
-      gstNumber: parsed.data.gstNumber?.trim() || null
-    },
-    include: {
-      addresses: true,
-      orders: { include: { items: { include: { product: true } } } }
+      parsed.data.hospitalName,
+      parsed.data.gstNumber?.trim() || null
+    );
+    customer = await prisma.customer.findUnique({
+      where: { id: customerId },
+      include: {
+        addresses: true,
+        orders: { include: { items: { include: { product: true } } } }
+      }
+    });
+    if (!customer) throw new Error("Account was created but profile could not be loaded.");
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      (error.code === "P2002" || (error.code === "P2010" && String(error.message).toLowerCase().includes("duplicate")))
+    ) {
+      return NextResponse.json({ ok: false, error: "An account already exists with this email or mobile number." }, { status: 409 });
     }
-  });
+
+    return NextResponse.json(
+      { ok: false, error: "Unable to create account. Please confirm the Supabase schema is updated and try again." },
+      { status: 500 }
+    );
+  }
 
   const response = NextResponse.json({ ok: true, customer: mapCustomerProfile(customer) });
   response.cookies.set(CUSTOMER_COOKIE, signCustomerSession(customer.id), {
