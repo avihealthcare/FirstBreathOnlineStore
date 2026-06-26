@@ -17,11 +17,12 @@ export function signCustomerSession(customerId: string) {
 
 export function verifyCustomerSession(session: string | undefined) {
   if (!session) return null;
-  const separator = session.lastIndexOf(".");
+  const decodedSession = safeDecodeCookieValue(session);
+  const separator = decodedSession.lastIndexOf(".");
   if (separator <= 0) return null;
 
-  const value = session.slice(0, separator);
-  const signature = session.slice(separator + 1);
+  const value = decodedSession.slice(0, separator);
+  const signature = decodedSession.slice(separator + 1);
   const expected = signCustomerSession(value.replace(/^customer:/, "")).split(".")[1];
   const valid =
     Buffer.from(signature).length === Buffer.from(expected).length &&
@@ -29,6 +30,14 @@ export function verifyCustomerSession(session: string | undefined) {
 
   if (!valid || !value.startsWith("customer:")) return null;
   return value.replace(/^customer:/, "");
+}
+
+function safeDecodeCookieValue(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 export async function getCurrentCustomerId() {

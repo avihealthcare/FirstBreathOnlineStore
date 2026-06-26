@@ -16,13 +16,22 @@ export function signAdminSession(value: string) {
 
 export function verifyAdminSession(session: string | undefined) {
   if (!session) return false;
-  const separator = session.lastIndexOf(".");
+  const decodedSession = safeDecodeCookieValue(session);
+  const separator = decodedSession.lastIndexOf(".");
   if (separator <= 0) return false;
-  const value = session.slice(0, separator);
-  const signature = session.slice(separator + 1);
+  const value = decodedSession.slice(0, separator);
+  const signature = decodedSession.slice(separator + 1);
   if (!value || !signature) return false;
   const expected = signAdminSession(value).split(".")[1];
   return Buffer.from(signature).length === Buffer.from(expected).length && crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+}
+
+function safeDecodeCookieValue(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 export async function isAdminAuthenticated() {
