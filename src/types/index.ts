@@ -15,6 +15,8 @@ export type Category = {
   description: string;
   image?: string;
   count: number;
+  isActive?: boolean;
+  sortOrder?: number;
 };
 
 export type Product = {
@@ -41,6 +43,7 @@ export type Product = {
   isFeatured?: boolean;
   isNewArrival?: boolean;
   isBestSeller?: boolean;
+  status?: "DRAFT" | "PUBLISHED" | "ARCHIVED";
   similarProductSlugs: string[];
 };
 
@@ -154,4 +157,46 @@ export type DiscountCoupon = {
   value: number;
   minOrderValue: number;
   isActive: boolean;
+};
+
+export type AdminCustomer = {
+  id: string;
+  fullName: string;
+  email: string;
+  mobile: string;
+  hospitalName: string;
+  gstNumber: string;
+  addressCount: number;
+  orderCount: number;
+  totalSpend: number;
+  createdAt: string;
+};
+
+export type AdminOrder = CustomerOrder & {
+  customerName: string;
+  email: string;
+  mobile: string;
+  hospitalName: string;
+  gstNumber?: string;
+  internalNotes?: string;
+};
+
+export type AdminDashboardData = {
+  totalProducts: number;
+  totalOrders: number;
+  pendingEnquiries: number;
+  revenue: number;
+  lowStock: Product[];
+  recentOrders: AdminOrder[];
+};
+
+export type AdminInitialData = {
+  products: Product[];
+  categories: Category[];
+  customers: AdminCustomer[];
+  orders: AdminOrder[];
+  hero: HeroSettings;
+  paymentOptions: PaymentOption[];
+  coupons: DiscountCoupon[];
+  dashboard: AdminDashboardData;
 };

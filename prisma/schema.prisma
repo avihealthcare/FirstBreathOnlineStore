@@ -70,8 +70,9 @@ model User {
 model Customer {
   id                    String            @id @default(cuid())
   fullName              String?
-  mobile                String            @unique
-  email                 String?
+  mobile                String?           @unique
+  email                 String?           @unique
+  passwordHash          String?
   hospitalName          String?
   gstNumber             String?
   billingAddress        String?
@@ -84,6 +85,7 @@ model Customer {
   updatedAt             DateTime          @updatedAt
 
   @@index([mobile])
+  @@index([email])
 }
 
 model CustomerAddress {
@@ -101,19 +103,6 @@ model CustomerAddress {
   updatedAt    DateTime @updatedAt
 
   @@index([customerId])
-}
-
-model OTPVerification {
-  id         String    @id @default(cuid())
-  mobile     String
-  otpHash    String
-  expiresAt  DateTime
-  verifiedAt DateTime?
-  attempts   Int       @default(0)
-  createdAt  DateTime  @default(now())
-
-  @@index([mobile])
-  @@index([expiresAt])
 }
 
 model Category {

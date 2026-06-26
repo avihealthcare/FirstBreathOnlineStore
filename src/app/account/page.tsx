@@ -4,7 +4,7 @@ import Link from "next/link";
 import { MapPin, PackageCheck, RefreshCcw, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { OtpLoginForm } from "@/components/commerce/otp-login-form";
+import { CustomerEmailAuthForm } from "@/components/commerce/customer-email-auth-form";
 import { ProductCard } from "@/components/commerce/product-card";
 import { products } from "@/lib/data";
 import { formatCurrency } from "@/lib/utils";
@@ -18,7 +18,7 @@ export default function AccountPage() {
   if (!isLoggedIn || !customer) {
     return (
       <div className="container max-w-xl py-10">
-        <OtpLoginForm />
+        <CustomerEmailAuthForm mode="login" />
       </div>
     );
   }

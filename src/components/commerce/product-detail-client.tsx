@@ -8,16 +8,15 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ProductCard } from "@/components/commerce/product-card";
 import { ProductGallery } from "@/components/commerce/product-gallery";
 import { DetailPurchasePanel } from "@/components/commerce/detail-purchase-panel";
-import { useAdminStore } from "@/store/admin-store";
 import type { Product } from "@/types";
 
 type ProductDetailClientProps = {
   slug: string;
   initialProduct?: Product;
+  allProducts: Product[];
 };
 
-export function ProductDetailClient({ slug, initialProduct }: ProductDetailClientProps) {
-  const allProducts = useAdminStore((state) => state.products);
+export function ProductDetailClient({ slug, initialProduct, allProducts }: ProductDetailClientProps) {
   const product = allProducts.find((item) => item.slug === slug) ?? initialProduct;
 
   if (!product) {

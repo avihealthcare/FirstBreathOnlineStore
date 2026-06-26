@@ -10,7 +10,7 @@ const policies = {
       "Customer and order data should be handled according to privacy and data protection best practices. Real production deployment should include finalized legal language, consent handling, and access controls.",
     points: [
       "Collect only the customer, hospital, GST, shipping, and order information required for fulfilment.",
-      "Do not expose service-role keys, OTP secrets, payment credentials, or private customer data to the browser.",
+      "Do not expose service-role keys, password/session secrets, payment credentials, or private customer data to the browser.",
       "Restrict admin access before production launch and audit customer data workflows."
     ]
   },

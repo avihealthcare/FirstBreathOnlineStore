@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Boxes, Headphones, HeartPulse, ShieldCheck, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,12 +6,19 @@ import { CategoryCard } from "@/components/commerce/category-card";
 import { ProductCard } from "@/components/commerce/product-card";
 import { TestimonialCard } from "@/components/commerce/testimonial-card";
 import { TrustBadge } from "@/components/commerce/trust-badge";
-import { bulkBanner, categories, testimonials, trustNotes } from "@/lib/data";
-import { useAdminStore } from "@/store/admin-store";
+import { trustNotes } from "@/lib/data";
+import { getBulkBanner, getCatalogCategories, getCatalogProducts, getHomepageContent, getTestimonials } from "@/lib/catalog";
 
-export default function HomePage() {
-  const hero = useAdminStore((state) => state.hero);
-  const allProducts = useAdminStore((state) => state.products);
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const [hero, allProducts, categories, bulkBanner, testimonials] = await Promise.all([
+    getHomepageContent(),
+    getCatalogProducts(),
+    getCatalogCategories(),
+    getBulkBanner(),
+    getTestimonials()
+  ]);
   const featuredProducts = allProducts.filter((product) => product.isFeatured).slice(0, 4);
 
   return (

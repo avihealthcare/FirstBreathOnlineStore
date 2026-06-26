@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import { defaultCoupons, defaultHeroSettings, defaultPaymentOptions } from "../src/lib/defaults";
+import { hashPassword } from "../src/lib/password";
 
 const prisma = new PrismaClient();
 
@@ -107,6 +109,18 @@ const products = [
 ];
 
 async function main() {
+  const adminPasswordHash = await hashPassword(process.env.SEED_ADMIN_PASSWORD ?? "FirstBreath@123");
+  await prisma.user.upsert({
+    where: { email: process.env.SEED_ADMIN_EMAIL ?? "admin@avihealthcare.com" },
+    update: { passwordHash: adminPasswordHash, role: "ADMIN" },
+    create: {
+      name: "AVI FirstBreath Admin",
+      email: process.env.SEED_ADMIN_EMAIL ?? "admin@avihealthcare.com",
+      passwordHash: adminPasswordHash,
+      role: "ADMIN"
+    }
+  });
+
   const categoryMap = new Map<string, string>();
 
   for (const [name, slug, description] of categories) {
@@ -194,11 +208,67 @@ async function main() {
       id: "seed-banner-bulk",
       title: "Bulk Purchase? Get Special Pricing",
       subtitle: "We support bulk hospital and institutional orders with specification confirmation.",
-      ctaLabel: "Request Bulk Quote",
-      ctaHref: "/checkout",
+      ctaLabel: "Explore Products",
+      ctaHref: "/products",
       discountText: "Institutional pricing available"
     }
   });
+
+  await prisma.homepageContent.upsert({
+    where: { id: "seed-homepage-content" },
+    update: defaultHeroSettings,
+    create: { id: "seed-homepage-content", ...defaultHeroSettings }
+  });
+
+  for (const option of defaultPaymentOptions) {
+    await prisma.paymentOptionSetting.upsert({
+      where: { code: option.id },
+      update: {
+        label: option.label,
+        description: option.description,
+        isActive: option.isActive,
+        bankName: option.bankName,
+        accountName: option.accountName,
+        accountNumber: option.accountNumber,
+        ifsc: option.ifsc,
+        branch: option.branch,
+        instructions: option.instructions
+      },
+      create: {
+        code: option.id,
+        label: option.label,
+        description: option.description,
+        isActive: option.isActive,
+        bankName: option.bankName,
+        accountName: option.accountName,
+        accountNumber: option.accountNumber,
+        ifsc: option.ifsc,
+        branch: option.branch,
+        instructions: option.instructions
+      }
+    });
+  }
+
+  for (const coupon of defaultCoupons) {
+    await prisma.discountCoupon.upsert({
+      where: { code: coupon.code },
+      update: {
+        description: coupon.description,
+        type: coupon.type,
+        value: coupon.value,
+        minOrderValue: coupon.minOrderValue,
+        isActive: coupon.isActive
+      },
+      create: {
+        code: coupon.code,
+        description: coupon.description,
+        type: coupon.type,
+        value: coupon.value,
+        minOrderValue: coupon.minOrderValue,
+        isActive: coupon.isActive
+      }
+    });
+  }
 
   await prisma.storeSetting.upsert({
     where: { id: "seed-store-settings" },

@@ -1,24 +1,9 @@
 import { z } from "zod";
-import { isIndianMobile } from "@/lib/utils";
-
-export const mobileSchema = z
-  .string()
-  .min(10, "Enter a valid 10-digit mobile number")
-  .refine(isIndianMobile, "Enter a valid Indian mobile number");
-
-export const otpRequestSchema = z.object({
-  mobile: mobileSchema
-});
-
-export const otpVerifySchema = z.object({
-  mobile: mobileSchema,
-  otp: z.string().length(6, "Enter the 6-digit OTP")
-});
 
 export const checkoutSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
   email: z.string().email("Enter a valid email"),
-  mobile: mobileSchema,
+  mobile: z.string().min(10, "Enter a valid mobile number"),
   hospitalName: z.string().min(2, "Hospital/company name is required"),
   gstNumber: z.string().optional(),
   addressLine1: z.string().min(4, "Shipping address is required"),
@@ -32,6 +17,27 @@ export const checkoutSchema = z.object({
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+export const customerLoginSchema = z.object({
+  email: z.string().email("Enter a valid email"),
+  password: z.string().min(8, "Password must be at least 8 characters")
+});
+
+export const customerSignupSchema = customerLoginSchema.extend({
+  fullName: z.string().min(2, "Full name is required"),
+  hospitalName: z.string().min(2, "Hospital/company name is required"),
+  mobile: z.string().optional(),
+  gstNumber: z.string().optional()
+});
+
+export const adminLoginSchema = z.object({
+  email: z.string().email("Enter a valid admin email"),
+  password: z.string().min(8, "Enter the admin password")
+});
+
+export type CustomerLoginInput = z.infer<typeof customerLoginSchema>;
+export type CustomerSignupInput = z.infer<typeof customerSignupSchema>;
+export type AdminLoginInput = z.infer<typeof adminLoginSchema>;
 
 export const adminProductSchema = z.object({
   name: z.string().min(2),
@@ -59,3 +65,24 @@ export const adminProductSchema = z.object({
 });
 
 export type AdminProductInput = z.infer<typeof adminProductSchema>;
+
+export const categorySchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(2, "Category name is required"),
+  slug: z.string().optional(),
+  description: z.string().min(5, "Category description is required"),
+  image: z.string().optional(),
+  isActive: z.boolean().default(true),
+  sortOrder: z.coerce.number().int().default(0)
+});
+
+export const customerProfileSchema = z.object({
+  fullName: z.string().min(2),
+  email: z.string().email(),
+  mobile: z.string().optional(),
+  hospitalName: z.string().optional(),
+  gstNumber: z.string().optional()
+});
+
+export type CategoryInput = z.infer<typeof categorySchema>;
+export type CustomerProfileInput = z.infer<typeof customerProfileSchema>;

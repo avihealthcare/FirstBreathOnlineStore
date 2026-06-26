@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AdminPanel } from "@/components/admin/admin-panel";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
+import { getAdminInitialData } from "@/lib/catalog";
 
 export const metadata: Metadata = {
   title: "Admin Panel",
@@ -13,9 +14,11 @@ export default async function AdminPage() {
     redirect("/admin/login");
   }
 
+  const initialData = await getAdminInitialData();
+
   return (
     <div className="container py-8">
-      <AdminPanel />
+      <AdminPanel initialData={initialData} />
     </div>
   );
 }

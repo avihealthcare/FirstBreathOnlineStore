@@ -3,7 +3,7 @@
 import { MapPin, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { OtpLoginForm } from "@/components/commerce/otp-login-form";
+import { CustomerEmailAuthForm } from "@/components/commerce/customer-email-auth-form";
 import { useCustomerStore } from "@/store/customer-store";
 
 export default function AddressesPage() {
@@ -15,7 +15,7 @@ export default function AddressesPage() {
   if (!isLoggedIn || !customer) {
     return (
       <div className="container max-w-xl py-10">
-        <OtpLoginForm />
+        <CustomerEmailAuthForm mode="login" />
       </div>
     );
   }

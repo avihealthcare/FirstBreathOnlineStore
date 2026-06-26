@@ -5,7 +5,6 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ProductCard } from "@/components/commerce/product-card";
 import { SearchBar } from "@/components/commerce/search-bar";
 import { FilterSidebar } from "@/components/commerce/filter-sidebar";
-import { useAdminStore } from "@/store/admin-store";
 import type { Category, Product } from "@/types";
 
 type ProductCatalogProps = {
@@ -16,8 +15,7 @@ type ProductCatalogProps = {
 };
 
 export function ProductCatalog({ products, categories, initialSearch = "", initialCategory = "all" }: ProductCatalogProps) {
-  const adminProducts = useAdminStore((state) => state.products);
-  const catalogueProducts = adminProducts.length ? adminProducts : products;
+  const catalogueProducts = products;
   const [search, setSearch] = useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [maxPrice, setMaxPrice] = useState(3000);

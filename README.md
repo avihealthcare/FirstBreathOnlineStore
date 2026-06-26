@@ -6,12 +6,12 @@ Production-ready ecommerce MVP for AVI Healthcare Pvt Ltd to sell neonatal consu
 
 - Next.js App Router, TypeScript, Tailwind CSS, ShadCN-style UI primitives
 - Product catalogue, search, filters, sorting, product detail pages, cart, checkout, and confirmation
-- Mobile OTP login before checkout with mock OTP `123456`
+- Email/password customer login before checkout
 - Customer account area with profile, saved addresses, order history, repeat order, invoice placeholder, saved products, and recent purchases
-- Protected admin panel for dashboard, product CRUD UI, homepage hero, SEO, categories, orders, payment options, coupons, banners, testimonials, settings, and desktop/mobile preview
+- Protected admin panel for dashboard, product CRUD, categories, customers, orders, homepage hero, payment options, coupons, SEO, banners, testimonials, settings, and desktop/mobile preview
 - Prisma schema and seed script for Supabase Postgres
-- Local mock data layer so the store works before live Supabase, Razorpay, SMS, ERP, or Cloudinary credentials are added
-- Browser-persisted admin MVP settings with Prisma schema placeholders for later Supabase persistence
+- Local mock fallback so the store can render before live Supabase, Razorpay, ERP, or Cloudinary credentials are added
+- Prisma-backed admin APIs for product, category, homepage, payment, coupon, order, and customer workflows
 
 ## Tech Stack
 
@@ -24,8 +24,8 @@ Production-ready ecommerce MVP for AVI Healthcare Pvt Ltd to sell neonatal consu
 - Zod and React Hook Form
 - Framer Motion
 - Lucide React
-- Auth.js/NextAuth-ready login UI
-- Razorpay, SMS provider, and Cloudinary placeholders
+- Email/password customer and admin authentication using signed HttpOnly cookies
+- Razorpay and Cloudinary placeholders
 
 ## Local Setup
 
@@ -51,7 +51,7 @@ The app runs locally with mock data without Supabase credentials. To connect Sup
 
 1. Add `DATABASE_URL` and `DIRECT_URL`.
 2. Add public Supabase values only as `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
-3. Keep `SUPABASE_SERVICE_ROLE_KEY`, SMS provider keys, and Razorpay secret keys server-only.
+3. Keep `SUPABASE_SERVICE_ROLE_KEY`, admin/customer session secrets, admin passwords, and Razorpay secret keys server-only.
 4. Run:
 
 ```bash
@@ -61,28 +61,33 @@ npm run prisma:seed
 
 Supabase’s current Prisma guidance recommends using a dedicated Prisma database user and the Supavisor pooler connection string for `DATABASE_URL`.
 
-## OTP MVP
+## Customer Login
 
-- Checkout is protected by mobile OTP login.
-- Indian mobile number validation is included.
-- Mock OTP request/verify endpoints live in `src/app/api/otp`.
-- The MVP OTP is `123456` through `OTP_FIXED_CODE`.
-- Rate-limit, expiry, and attempt-count placeholders are implemented.
-- SMS providers such as MSG91, Twilio, Gupshup, or Fast2SMS can replace the mock send path later.
+- Checkout is protected by email/password customer login.
+- Signup creates a `Customer` record with hashed password storage.
+- Customer sessions use signed HttpOnly cookies.
+- Customer profile details, default shipping address, and orders are persisted in Supabase through Prisma.
 
 ## Admin Access
 
 The admin panel is not linked in the public header or footer. Open `/admin/login` directly.
 
-Local default admin code:
+Admin login is email/password based. For first deployment, either seed an admin user:
 
-```text
-AVI-FIRSTBREATH-ADMIN
+```bash
+SEED_ADMIN_EMAIL="admin@avihealthcare.com" SEED_ADMIN_PASSWORD="replace-before-seeding" npm run prisma:seed
 ```
 
-Set `ADMIN_ACCESS_CODE` and `ADMIN_SESSION_SECRET` before production deployment. `/admin` is protected by middleware and a signed server-side cookie.
+Or set server-only fallback variables on Hostinger:
 
-Admin MVP controls include product add/edit/delete, product picture URLs/uploads, homepage hero content, payment methods with bank details, discount coupons, and desktop/mobile preview.
+```env
+ADMIN_EMAIL="admin@avihealthcare.com"
+ADMIN_PASSWORD="strong-production-password"
+```
+
+Set `ADMIN_SESSION_SECRET`, `CUSTOMER_SESSION_SECRET`, and `NEXTAUTH_SECRET` before production deployment. `/admin` is protected by middleware and a signed server-side cookie.
+
+Admin controls include product add/edit/delete, product picture URLs/uploads, selectable categories, customers, order status/internal notes, homepage hero content, payment methods with bank details, discount coupons, and desktop/mobile preview.
 
 ## Important Routes
 
@@ -90,7 +95,7 @@ Admin MVP controls include product add/edit/delete, product picture URLs/uploads
 - `/products` product listing
 - `/products/[slug]` product detail
 - `/cart` cart
-- `/checkout` OTP-protected checkout
+- `/checkout` email-login protected checkout
 - `/login` and `/signup`
 - `/account`, `/account/orders`, `/account/addresses`, `/account/profile`
 - `/admin`
@@ -106,7 +111,7 @@ Admin MVP controls include product add/edit/delete, product picture URLs/uploads
 - Product detail complete
 - Cart complete
 - Checkout complete
-- Login/signup UI complete
+- Login/signup complete
 - Admin dashboard complete
 - Product CRUD complete
 - Homepage content management complete
@@ -134,9 +139,7 @@ Admin MVP controls include product add/edit/delete, product picture URLs/uploads
 ## Next Production Steps
 
 - Replace reference-cropped sample product images with approved product photography.
-- Connect browser-persisted admin actions to API routes backed by Prisma and Supabase.
-- Replace local admin access code with production authentication and role-based authorization for `/admin`.
+- Add role-based user management screens for multiple admin/staff users.
 - Add RLS policies if exposing tables through Supabase Data API.
-- Connect SMS provider for OTP delivery.
 - Connect Razorpay keys and webhook handling.
 - Add inventory, invoice, ERP, and logistics integrations.

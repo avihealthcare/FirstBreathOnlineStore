@@ -13,9 +13,9 @@ import { calculateCartTotals, formatCurrency } from "@/lib/utils";
 import { checkoutSchema, type CheckoutInput } from "@/lib/validation";
 import { useCartStore } from "@/store/cart-store";
 import { useCustomerStore } from "@/store/customer-store";
-import { calculateCouponDiscount, useAdminStore } from "@/store/admin-store";
-import { OtpLoginForm } from "@/components/commerce/otp-login-form";
-import type { CustomerOrder } from "@/types";
+import { calculateCouponDiscount } from "@/store/admin-store";
+import { CustomerEmailAuthForm } from "@/components/commerce/customer-email-auth-form";
+import type { CustomerOrder, CustomerProfile, DiscountCoupon, PaymentOption } from "@/types";
 
 const defaultValues: CheckoutInput = {
   fullName: "",
@@ -33,26 +33,35 @@ const defaultValues: CheckoutInput = {
   paymentMethod: "purchase-order"
 };
 
-export function CheckoutForm() {
+type CheckoutFormProps = {
+  initialPaymentOptions: PaymentOption[];
+  initialCoupons: DiscountCoupon[];
+  initialCustomer?: CustomerProfile | null;
+};
+
+export function CheckoutForm({ initialPaymentOptions, initialCoupons, initialCustomer = null }: CheckoutFormProps) {
   const items = useCartStore((state) => state.items);
   const clearCart = useCartStore((state) => state.clearCart);
   const customer = useCustomerStore((state) => state.customer);
   const isLoggedIn = useCustomerStore((state) => state.isLoggedIn);
+  const setCustomer = useCustomerStore((state) => state.setCustomer);
   const updateProfile = useCustomerStore((state) => state.updateProfile);
-  const addOrder = useCustomerStore((state) => state.addOrder);
-  const paymentOptions = useAdminStore((state) => state.paymentOptions);
-  const coupons = useAdminStore((state) => state.coupons);
+  const recordOrder = useCustomerStore((state) => state.recordOrder);
+  const paymentOptions = initialPaymentOptions;
+  const coupons = initialCoupons;
   const [confirmedOrder, setConfirmedOrder] = useState<CustomerOrder | null>(null);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCouponId, setAppliedCouponId] = useState("");
   const [couponMessage, setCouponMessage] = useState("");
+  const [orderError, setOrderError] = useState("");
 
   const totals = useMemo(() => calculateCartTotals(items), [items]);
   const activePaymentOptions = useMemo(() => paymentOptions.filter((option) => option.isActive), [paymentOptions]);
   const appliedCoupon = coupons.find((coupon) => coupon.id === appliedCouponId);
   const discount = useMemo(() => calculateCouponDiscount(appliedCoupon, totals.subtotal), [appliedCoupon, totals.subtotal]);
   const grandTotal = Math.max(0, totals.total - discount);
-  const defaultAddress = customer?.addresses.find((address) => address.isDefault) ?? customer?.addresses[0];
+  const activeCustomer = customer ?? initialCustomer;
+  const defaultAddress = activeCustomer?.addresses.find((address) => address.isDefault) ?? activeCustomer?.addresses[0];
 
   const {
     register,
@@ -66,13 +75,18 @@ export function CheckoutForm() {
   });
 
   useEffect(() => {
-    if (!customer) return;
+    if (initialCustomer && !customer) setCustomer(initialCustomer);
+  }, [customer, initialCustomer, setCustomer]);
+
+  useEffect(() => {
+    const profile = customer ?? initialCustomer;
+    if (!profile) return;
     reset({
-      fullName: customer.fullName,
-      email: customer.email,
-      mobile: customer.mobile,
-      hospitalName: customer.hospitalName,
-      gstNumber: customer.gstNumber,
+      fullName: profile.fullName,
+      email: profile.email,
+      mobile: profile.mobile,
+      hospitalName: profile.hospitalName,
+      gstNumber: profile.gstNumber,
       addressLine1: defaultAddress?.addressLine1 ?? "",
       addressLine2: defaultAddress?.addressLine2 ?? "",
       city: defaultAddress?.city ?? "",
@@ -82,10 +96,10 @@ export function CheckoutForm() {
       purchaseType: "Hospital Purchase",
       paymentMethod: activePaymentOptions[0]?.id ?? "purchase-order"
     });
-  }, [activePaymentOptions, customer, defaultAddress, reset]);
+  }, [activePaymentOptions, customer, defaultAddress, initialCustomer, reset]);
 
   function selectAddress(id: string) {
-    const address = customer?.addresses.find((item) => item.id === id);
+    const address = activeCustomer?.addresses.find((item) => item.id === id);
     if (!address) return;
     setValue("addressLine1", address.addressLine1);
     setValue("addressLine2", address.addressLine2 ?? "");
@@ -95,7 +109,8 @@ export function CheckoutForm() {
     setValue("country", address.country);
   }
 
-  function submitOrder(values: CheckoutInput) {
+  async function submitOrder(values: CheckoutInput) {
+    setOrderError("");
     const selectedPayment = activePaymentOptions.find((option) => option.id === values.paymentMethod);
     updateProfile({
       fullName: values.fullName,
@@ -105,23 +120,27 @@ export function CheckoutForm() {
       gstNumber: values.gstNumber
     });
 
-    const order = addOrder({
-      status: "Pending",
-      paymentMethod: selectedPayment?.label ?? values.paymentMethod,
-      subtotal: totals.subtotal,
-      tax: totals.tax,
-      shipping: totals.shipping,
-      total: grandTotal,
-      items: items.map((item) => ({
-        productSlug: item.productSlug,
-        productName: item.name,
-        sku: item.sku,
-        variant: item.variant,
-        quantity: item.quantity,
-        unitPrice: item.price,
-        total: item.price * item.quantity
-      }))
+    const response = await fetch("/api/checkout/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customer: values,
+        items,
+        couponCode: appliedCoupon?.code,
+        totals: { subtotal: totals.subtotal, tax: totals.tax, shipping: totals.shipping, total: grandTotal },
+        paymentLabel: selectedPayment?.label ?? values.paymentMethod
+      })
     });
+    const data = (await response.json()) as { ok: boolean; order?: CustomerOrder; customer?: CustomerProfile; error?: string };
+
+    if (!response.ok || !data.ok || !data.order) {
+      setOrderError(data.error ?? "Unable to place order.");
+      return;
+    }
+
+    if (data.customer) setCustomer(data.customer);
+    const order = data.order;
+    recordOrder(order);
 
     clearCart();
     setConfirmedOrder(order);
@@ -182,7 +201,14 @@ export function CheckoutForm() {
   if (!isLoggedIn) {
     return (
       <div className="mx-auto max-w-xl">
-        <OtpLoginForm />
+        <CustomerEmailAuthForm mode="login" />
+        <p className="mt-4 text-center text-sm text-slate-600">
+          Login with email to continue checkout. New hospitals can{" "}
+          <Link href="/signup" className="font-bold text-avi-teal">
+            create an account
+          </Link>
+          .
+        </p>
       </div>
     );
   }
@@ -237,7 +263,7 @@ export function CheckoutForm() {
             </div>
           </div>
 
-          {customer?.addresses.length ? (
+          {activeCustomer?.addresses.length ? (
             <div className="mt-5">
               <Label htmlFor="saved-address">Select Saved Address</Label>
               <select
@@ -246,7 +272,7 @@ export function CheckoutForm() {
                 onChange={(event) => selectAddress(event.target.value)}
                 defaultValue={defaultAddress?.id}
               >
-                {customer.addresses.map((address) => (
+                {activeCustomer.addresses.map((address) => (
                   <option key={address.id} value={address.id}>
                     {address.addressLine1}, {address.city} {address.isDefault ? "(Default)" : ""}
                   </option>
@@ -389,6 +415,8 @@ export function CheckoutForm() {
             Repeat order is available from order history.
           </span>
         </div>
+
+        {orderError ? <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm font-semibold text-red-700">{orderError}</p> : null}
 
         <Button type="submit" className="mt-5 w-full" disabled={isSubmitting || activePaymentOptions.length === 0}>
           Place Order / Submit Enquiry

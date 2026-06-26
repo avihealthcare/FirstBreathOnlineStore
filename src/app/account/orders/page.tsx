@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Download, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { OtpLoginForm } from "@/components/commerce/otp-login-form";
+import { CustomerEmailAuthForm } from "@/components/commerce/customer-email-auth-form";
 import { products } from "@/lib/data";
 import { formatCurrency } from "@/lib/utils";
 import { useCartStore } from "@/store/cart-store";
@@ -18,7 +18,7 @@ export default function OrdersPage() {
   if (!isLoggedIn) {
     return (
       <div className="container max-w-xl py-10">
-        <OtpLoginForm />
+        <CustomerEmailAuthForm mode="login" />
       </div>
     );
   }

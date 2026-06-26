@@ -11,11 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { adminProductSchema, type AdminProductInput } from "@/lib/validation";
 import { productToAdminInput } from "@/store/admin-store";
-import type { Product } from "@/types";
+import type { Category, Product } from "@/types";
 
 type AdminProductFormProps = {
   product?: Product | null;
-  onSubmitProduct: (product: AdminProductInput, existingSlug?: string) => void;
+  categories: Category[];
+  onSubmitProduct: (product: AdminProductInput, existingSlug?: string) => Promise<void> | void;
   onCancelEdit?: () => void;
 };
 
@@ -45,8 +46,10 @@ const blankProductValues: AdminProductInput = {
   metaDescription: "Buy neonatal breathing circuits for hospital and NICU respiratory workflows."
 };
 
-export function AdminProductForm({ product, onSubmitProduct, onCancelEdit }: AdminProductFormProps) {
+export function AdminProductForm({ product, categories, onSubmitProduct, onCancelEdit }: AdminProductFormProps) {
   const [newImageUrl, setNewImageUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState("");
   const {
     register,
     handleSubmit,
@@ -73,10 +76,18 @@ export function AdminProductForm({ product, onSubmitProduct, onCancelEdit }: Adm
     reset(product ? productToAdminInput(product) : blankProductValues);
   }, [product, reset]);
 
-  function submit(values: AdminProductInput) {
-    onSubmitProduct(values, product?.slug);
-    if (!product) {
-      reset(blankProductValues);
+  async function submit(values: AdminProductInput) {
+    setFormError("");
+    setSaving(true);
+    try {
+      await Promise.resolve(onSubmitProduct(values, product?.slug));
+      if (!product) {
+        reset(blankProductValues);
+      }
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Unable to save product.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -96,15 +107,16 @@ export function AdminProductForm({ product, onSubmitProduct, onCancelEdit }: Adm
 
   function handleFileUpload(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === "string") {
-          setImages([...imageList, reader.result]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    Promise.all(
+      files.map(
+        (file) =>
+          new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+            reader.readAsDataURL(file);
+          })
+      )
+    ).then((images) => setImages([...imageList, ...images.filter(Boolean)]));
     event.target.value = "";
   }
 
@@ -121,12 +133,13 @@ export function AdminProductForm({ product, onSubmitProduct, onCancelEdit }: Adm
               Cancel Edit
             </Button>
           ) : null}
-          <Button type="submit">
+          <Button type="submit" disabled={saving}>
             <Save className="h-4 w-4" />
-            Save Product
+            {saving ? "Saving..." : "Save Product"}
           </Button>
         </div>
       </div>
+      {formError ? <p className="rounded-lg bg-red-50 p-3 text-sm font-semibold text-red-700">{formError}</p> : null}
 
       <div className="grid gap-4 md:grid-cols-2">
         <AdminField label="Product Name" error={errors.name?.message}>
@@ -145,7 +158,21 @@ export function AdminProductForm({ product, onSubmitProduct, onCancelEdit }: Adm
           <Input type="number" {...register("salePrice")} />
         </AdminField>
         <AdminField label="Category" error={errors.category?.message}>
-          <Input {...register("category")} />
+          <select
+            className="h-11 w-full rounded-lg border border-input bg-white px-3 text-sm focus:border-avi-teal focus:outline-none focus:ring-2 focus:ring-avi-teal/20"
+            value={watch("categorySlug") || watch("category")}
+            onChange={(event) => {
+              const category = categories.find((item) => item.slug === event.target.value);
+              setValue("categorySlug", category?.slug ?? "", { shouldDirty: true, shouldValidate: true });
+              setValue("category", category?.name ?? event.target.value, { shouldDirty: true, shouldValidate: true });
+            }}
+          >
+            {categories.map((category) => (
+              <option key={category.id} value={category.slug}>
+                {category.name}
+              </option>
+            ))}
+          </select>
         </AdminField>
         <AdminField label="Category Slug" error={errors.categorySlug?.message}>
           <Input {...register("categorySlug")} />
@@ -176,8 +203,8 @@ export function AdminProductForm({ product, onSubmitProduct, onCancelEdit }: Adm
           </div>
           <label className="grid min-h-24 cursor-pointer place-items-center rounded-lg border border-dashed border-slate-300 bg-white p-4 text-center transition hover:border-avi-teal">
             <ImagePlus className="h-7 w-7 text-avi-teal" aria-hidden="true" />
-            <span className="mt-2 text-sm font-semibold text-avi-ink">Upload product pictures for MVP preview</span>
-            <span className="text-xs text-slate-500">Files are stored as browser-local data URLs until Cloudinary/Supabase storage is connected.</span>
+            <span className="mt-2 text-sm font-semibold text-avi-ink">Upload product pictures</span>
+            <span className="text-xs text-slate-500">Uploaded previews are saved into the product image records as data URLs for this MVP.</span>
             <input type="file" accept="image/*" multiple className="sr-only" onChange={handleFileUpload} />
           </label>
           <Textarea className="hidden" {...register("imageUrls")} />

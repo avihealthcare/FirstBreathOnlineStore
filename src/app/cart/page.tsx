@@ -43,7 +43,7 @@ export default function CartPage() {
       ) : (
         <EmptyState
           title="Your cart is empty"
-          description="Browse neonatal consumables, add items to cart, and continue to OTP-protected checkout."
+          description="Browse neonatal consumables, add items to cart, and continue to email-protected checkout."
         />
       )}
     </div>

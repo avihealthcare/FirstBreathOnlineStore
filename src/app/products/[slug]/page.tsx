@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
 import { ProductDetailClient } from "@/components/commerce/product-detail-client";
-import { getProductBySlug, products } from "@/lib/data";
+import { getCatalogProducts, getProductBySlugFromDb } from "@/lib/catalog";
 
 type ProductDetailProps = {
   params: Promise<{ slug: string }>;
 };
 
-export function generateStaticParams() {
+export const dynamic = "force-dynamic";
+
+export async function generateStaticParams() {
+  const products = await getCatalogProducts();
   return products.map((product) => ({ slug: product.slug }));
 }
 
 export async function generateMetadata({ params }: ProductDetailProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlugFromDb(slug);
 
   if (!product) {
     return {
@@ -35,7 +38,7 @@ export async function generateMetadata({ params }: ProductDetailProps): Promise<
 
 export default async function ProductDetailPage({ params }: ProductDetailProps) {
   const { slug } = await params;
-  const initialProduct = getProductBySlug(slug);
+  const [initialProduct, allProducts] = await Promise.all([getProductBySlugFromDb(slug), getCatalogProducts()]);
 
-  return <ProductDetailClient slug={slug} initialProduct={initialProduct} />;
+  return <ProductDetailClient slug={slug} initialProduct={initialProduct} allProducts={allProducts} />;
 }

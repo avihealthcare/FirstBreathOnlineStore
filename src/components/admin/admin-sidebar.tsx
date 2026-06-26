@@ -12,7 +12,8 @@ import {
   PackageCheck,
   Percent,
   Settings,
-  Smartphone
+  Smartphone,
+  UsersRound
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ export const adminSections = [
   { id: "products", label: "Products", icon: Boxes },
   { id: "seo", label: "SEO", icon: FileSearch },
   { id: "categories", label: "Categories", icon: FolderTree },
+  { id: "customers", label: "Customers", icon: UsersRound },
   { id: "orders", label: "Orders", icon: PackageCheck },
   { id: "payments", label: "Payments", icon: CreditCard },
   { id: "coupons", label: "Coupons", icon: Percent },

@@ -28,10 +28,18 @@ export function Header() {
   const [mounted, setMounted] = useState(false);
   const itemCount = useCartStore((state) => state.getItemCount());
   const isLoggedIn = useCustomerStore((state) => state.isLoggedIn);
+  const setCustomer = useCustomerStore((state) => state.setCustomer);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (isLoggedIn) return;
+    fetch("/api/customer/me")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (data?.customer) setCustomer(data.customer);
+      })
+      .catch(() => undefined);
+  }, [isLoggedIn, setCustomer]);
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
