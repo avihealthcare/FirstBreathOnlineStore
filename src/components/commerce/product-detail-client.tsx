@@ -62,7 +62,7 @@ export function ProductDetailClient({ slug, initialProduct, allProducts }: Produ
                 ))}
               </div>
               <h1 className="mt-4 text-3xl font-black leading-tight text-avi-ink">{product.name}</h1>
-              <p className="mt-3 text-sm leading-6 text-slate-600">{product.shortDescription}</p>
+              <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-600">{product.shortDescription}</p>
               <div className="mt-4 flex items-center gap-2 text-sm">
                 <span className="inline-flex items-center gap-1 text-amber-500">
                   <Star className="h-4 w-4 fill-current" aria-hidden="true" />
@@ -83,7 +83,7 @@ export function ProductDetailClient({ slug, initialProduct, allProducts }: Produ
 
           <div className="mt-8 grid gap-5 rounded-xl border border-border bg-white p-5 shadow-sm">
             <h2 className="text-xl font-black text-avi-ink">Description</h2>
-            <p className="text-sm leading-7 text-slate-700">{product.longDescription}</p>
+            <p className="whitespace-pre-line text-sm leading-7 text-slate-700">{product.longDescription}</p>
             <div className="rounded-lg bg-slate-50 p-4 text-sm leading-6 text-slate-700">
               <p className="font-bold text-avi-ink">Disclaimer</p>
               <p className="mt-1">
