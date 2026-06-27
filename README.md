@@ -59,7 +59,7 @@ npm run prisma:migrate
 npm run prisma:seed
 ```
 
-Supabase’s current Prisma guidance recommends using a dedicated Prisma database user and the Supavisor pooler connection string for `DATABASE_URL`. On shared hosts such as Hostinger, keep Prisma’s pool small by adding `?connection_limit=1&pool_timeout=20` to `DATABASE_URL`.
+Supabase’s current Prisma guidance recommends using a dedicated Prisma database user and the Supavisor transaction-pooler connection string for `DATABASE_URL`. On shared hosts such as Hostinger, use pooler port `6543` and keep Prisma’s pool small by adding `?pgbouncer=true&connection_limit=1&pool_timeout=20` to `DATABASE_URL`.
 
 ## Customer Login
 
