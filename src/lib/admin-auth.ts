@@ -9,21 +9,42 @@ function getSecret() {
   return process.env.ADMIN_SESSION_SECRET ?? process.env.NEXTAUTH_SECRET ?? "avi-firstbreath-local-admin-secret";
 }
 
+function signValue(value: string) {
+  return crypto.createHmac("sha256", getSecret()).update(value).digest("hex");
+}
+
+function safeEqual(left: string, right: string) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
 export function signAdminSession(value: string) {
-  const signature = crypto.createHmac("sha256", getSecret()).update(value).digest("hex");
-  return `${value}.${signature}`;
+  const payload = Buffer.from(value, "utf8").toString("base64url");
+  return `v2.${payload}.${signValue(payload)}`;
 }
 
 export function verifyAdminSession(session: string | undefined) {
   if (!session) return false;
   const decodedSession = safeDecodeCookieValue(session);
+
+  if (decodedSession.startsWith("v2.")) {
+    const [, payload, signature] = decodedSession.split(".");
+    if (!payload || !signature || !safeEqual(signature, signValue(payload))) return false;
+
+    try {
+      return Buffer.from(payload, "base64url").toString("utf8").startsWith("admin:");
+    } catch {
+      return false;
+    }
+  }
+
   const separator = decodedSession.lastIndexOf(".");
   if (separator <= 0) return false;
   const value = decodedSession.slice(0, separator);
   const signature = decodedSession.slice(separator + 1);
-  if (!value || !signature) return false;
-  const expected = signAdminSession(value).split(".")[1];
-  return Buffer.from(signature).length === Buffer.from(expected).length && crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  if (!value || !signature || !value.startsWith("admin:")) return false;
+  return safeEqual(signature, signValue(value));
 }
 
 function safeDecodeCookieValue(value: string) {
