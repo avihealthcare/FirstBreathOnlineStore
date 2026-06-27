@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ADMIN_COOKIE, authenticateAdmin, signAdminSession } from "@/lib/admin-auth";
+import { ADMIN_COOKIE, AdminAuthDatabaseError, authenticateAdmin, signAdminSession } from "@/lib/admin-auth";
 import { adminLoginSchema } from "@/lib/validation";
 
 export const runtime = "nodejs";
@@ -14,7 +14,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: parsed.error.errors[0]?.message ?? "Invalid login details." }, { status: 400 });
   }
 
-  const admin = await authenticateAdmin(parsed.data.email, parsed.data.password);
+  let admin: Awaited<ReturnType<typeof authenticateAdmin>>;
+
+  try {
+    admin = await authenticateAdmin(parsed.data.email, parsed.data.password);
+  } catch (error) {
+    if (error instanceof AdminAuthDatabaseError) {
+      return NextResponse.json(
+        { ok: false, error: "Admin database connection is busy. Please try again in a minute." },
+        { status: 503 }
+      );
+    }
+
+    throw error;
+  }
 
   if (!admin) {
     return NextResponse.json({ ok: false, error: "Invalid admin email or password." }, { status: 401 });

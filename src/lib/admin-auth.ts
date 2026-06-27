@@ -5,6 +5,13 @@ import { timingSafeStringEqual, verifyPassword } from "@/lib/password";
 
 const ADMIN_COOKIE = "avi-admin-session";
 
+export class AdminAuthDatabaseError extends Error {
+  constructor() {
+    super("Admin authentication database lookup failed.");
+    this.name = "AdminAuthDatabaseError";
+  }
+}
+
 function getSecret() {
   return process.env.ADMIN_SESSION_SECRET ?? process.env.NEXTAUTH_SECRET ?? "avi-firstbreath-local-admin-secret";
 }
@@ -62,12 +69,6 @@ export async function isAdminAuthenticated() {
 
 export async function authenticateAdmin(email: string, password: string) {
   const normalizedEmail = email.trim().toLowerCase();
-  const user = await prisma.user.findUnique({ where: { email: normalizedEmail } }).catch(() => null);
-
-  if (user?.role === "ADMIN" && (await verifyPassword(password, user.passwordHash))) {
-    return { id: user.id, email: user.email, name: user.name ?? "Admin" };
-  }
-
   const fallbackEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const fallbackPassword = process.env.ADMIN_PASSWORD;
 
@@ -78,6 +79,19 @@ export async function authenticateAdmin(email: string, password: string) {
     timingSafeStringEqual(password, fallbackPassword)
   ) {
     return { id: "env-admin", email: fallbackEmail, name: "Admin" };
+  }
+
+  let user: Awaited<ReturnType<typeof prisma.user.findUnique>>;
+
+  try {
+    user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+  } catch (error) {
+    console.error("Admin authentication database lookup failed", error);
+    throw new AdminAuthDatabaseError();
+  }
+
+  if (user?.role === "ADMIN" && (await verifyPassword(password, user.passwordHash))) {
+    return { id: user.id, email: user.email, name: user.name ?? "Admin" };
   }
 
   return null;
