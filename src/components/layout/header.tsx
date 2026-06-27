@@ -17,9 +17,7 @@ import type { StoreSettings } from "@/types";
 const navItems = [
   { label: "Home", href: "/" },
   { label: "Products", href: "/products" },
-  { label: "Offers", href: "/#bulk-orders" },
-  { label: "Quality", href: "/quality" },
-  { label: "Resources", href: "/resources" }
+  { label: "Offers", href: "/#bulk-orders" }
 ];
 
 export function Header() {

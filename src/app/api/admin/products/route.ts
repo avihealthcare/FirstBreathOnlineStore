@@ -53,6 +53,8 @@ async function upsertProduct(input: AdminProductInput, existingSlug?: string) {
       features: splitLines(input.features),
       stockQuantity: input.stockQuantity,
       availability: input.availability,
+      rating: input.rating,
+      reviewCount: input.reviewCount,
       shippingDetails: input.shippingDetails,
       isFeatured: input.isFeatured,
       isNewArrival: input.isNewArrival,

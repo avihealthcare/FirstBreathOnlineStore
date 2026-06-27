@@ -446,7 +446,7 @@ function ProductsSection({
           <p className="mt-1 text-sm text-slate-600">Products, pictures, variants, SEO details, and category links are saved in the database.</p>
         </div>
         <div className="overflow-auto">
-          <table className="w-full min-w-[920px] text-left text-sm">
+          <table className="w-full min-w-[1000px] text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-4 py-3">Product</th>
@@ -454,6 +454,7 @@ function ProductsSection({
                 <th className="px-4 py-3">SKU</th>
                 <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Price</th>
+                <th className="px-4 py-3">Rating</th>
                 <th className="px-4 py-3">Stock</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Actions</th>
@@ -467,6 +468,7 @@ function ProductsSection({
                   <td className="px-4 py-3 text-slate-600">{product.sku}</td>
                   <td className="px-4 py-3 text-slate-600">{product.category}</td>
                   <td className="px-4 py-3 font-semibold">{formatCurrency(product.salePrice ?? product.price)}</td>
+                  <td className="px-4 py-3 text-slate-600">{product.rating.toFixed(1)} ({product.reviewCount})</td>
                   <td className="px-4 py-3">{product.stockQuantity}</td>
                   <td className="px-4 py-3">
                     <Badge variant={product.status === "DRAFT" ? "muted" : "success"}>{product.status ?? "PUBLISHED"}</Badge>

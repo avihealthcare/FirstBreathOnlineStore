@@ -30,6 +30,8 @@ const blankProductValues: AdminProductInput = {
   categorySlug: "breathing-circuits",
   tags: "CPAP, Sterile, NICU",
   imageUrls: "/images/products/neonatal-breathing-circuit.png",
+  rating: 4.7,
+  reviewCount: 0,
   features: "Medical-grade material\nStandard connectors\nReady for clinical workflow",
   variants: "Size: Neonatal\nPack Type: Single\nSterility: Sterile",
   similarProducts: "infant-cpap-nasal-prongs, neonatal-cpap-mask",
@@ -49,6 +51,7 @@ const blankProductValues: AdminProductInput = {
 export function AdminProductForm({ product, categories, onSubmitProduct, onCancelEdit }: AdminProductFormProps) {
   const [newImageUrl, setNewImageUrl] = useState("");
   const [saving, setSaving] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const [formError, setFormError] = useState("");
   const {
     register,
@@ -105,19 +108,34 @@ export function AdminProductForm({ product, categories, onSubmitProduct, onCance
     setImages(imageList.filter((_, currentIndex) => currentIndex !== index));
   }
 
-  function handleFileUpload(event: ChangeEvent<HTMLInputElement>) {
+  async function handleFileUpload(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
-    Promise.all(
-      files.map(
-        (file) =>
-          new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-            reader.readAsDataURL(file);
-          })
-      )
-    ).then((images) => setImages([...imageList, ...images.filter(Boolean)]));
     event.target.value = "";
+    if (!files.length) return;
+
+    setFormError("");
+    setUploadingImages(true);
+
+    try {
+      const body = new FormData();
+      files.forEach((file) => body.append("files", file));
+
+      const response = await fetch("/api/admin/uploads/products", {
+        method: "POST",
+        body
+      });
+      const data = (await response.json().catch(() => ({}))) as { ok?: boolean; urls?: string[]; error?: string };
+
+      if (!response.ok || !data.ok || !data.urls?.length) {
+        throw new Error(data.error ?? "Unable to upload product pictures.");
+      }
+
+      setImages([...imageList, ...data.urls]);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Unable to upload product pictures.");
+    } finally {
+      setUploadingImages(false);
+    }
   }
 
   return (
@@ -133,9 +151,9 @@ export function AdminProductForm({ product, categories, onSubmitProduct, onCance
               Cancel Edit
             </Button>
           ) : null}
-          <Button type="submit" disabled={saving}>
+          <Button type="submit" disabled={saving || uploadingImages}>
             <Save className="h-4 w-4" />
-            {saving ? "Saving..." : "Save Product"}
+            {saving ? "Saving..." : uploadingImages ? "Uploading..." : "Save Product"}
           </Button>
         </div>
       </div>
@@ -183,6 +201,12 @@ export function AdminProductForm({ product, categories, onSubmitProduct, onCance
         <AdminField label="Tags" error={errors.tags?.message}>
           <Input {...register("tags")} />
         </AdminField>
+        <AdminField label="Rating" error={errors.rating?.message}>
+          <Input type="number" step="0.1" min="0" max="5" {...register("rating")} />
+        </AdminField>
+        <AdminField label="Review Count" error={errors.reviewCount?.message}>
+          <Input type="number" min="0" {...register("reviewCount")} />
+        </AdminField>
         <AdminField label="Stock Quantity" error={errors.stockQuantity?.message}>
           <Input type="number" {...register("stockQuantity")} />
         </AdminField>
@@ -203,9 +227,11 @@ export function AdminProductForm({ product, categories, onSubmitProduct, onCance
           </div>
           <label className="grid min-h-24 cursor-pointer place-items-center rounded-lg border border-dashed border-slate-300 bg-white p-4 text-center transition hover:border-avi-teal">
             <ImagePlus className="h-7 w-7 text-avi-teal" aria-hidden="true" />
-            <span className="mt-2 text-sm font-semibold text-avi-ink">Upload product pictures</span>
-            <span className="text-xs text-slate-500">Uploaded previews are saved into the product image records as data URLs for this MVP.</span>
-            <input type="file" accept="image/*" multiple className="sr-only" onChange={handleFileUpload} />
+            <span className="mt-2 text-sm font-semibold text-avi-ink">
+              {uploadingImages ? "Uploading product pictures..." : "Upload product pictures"}
+            </span>
+            <span className="text-xs text-slate-500">Images are uploaded first, then saved as product image URLs in the database.</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple className="sr-only" onChange={handleFileUpload} disabled={uploadingImages} />
           </label>
           <Textarea className="hidden" {...register("imageUrls")} />
           {imageList.length ? (

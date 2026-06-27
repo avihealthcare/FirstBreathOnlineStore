@@ -61,6 +61,12 @@ export async function Footer() {
             <Link className="text-sm text-slate-600 hover:text-avi-teal" href="/account/orders">
               Order History
             </Link>
+            <Link className="text-sm text-slate-600 hover:text-avi-teal" href="/quality">
+              Quality
+            </Link>
+            <Link className="text-sm text-slate-600 hover:text-avi-teal" href="/resources">
+              Resources
+            </Link>
           </div>
         </div>
 

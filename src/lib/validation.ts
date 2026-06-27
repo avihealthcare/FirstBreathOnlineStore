@@ -82,6 +82,8 @@ export const adminProductSchema = z.object({
   categorySlug: z.string().optional(),
   tags: z.string().min(2),
   imageUrls: z.string().min(1, "Add at least one product picture"),
+  rating: z.coerce.number().min(0, "Rating cannot be below 0").max(5, "Rating cannot be above 5").default(4.7),
+  reviewCount: z.coerce.number().int().nonnegative("Review count cannot be negative").default(0),
   features: z.string().min(5),
   variants: z.string().min(3),
   similarProducts: z.string().optional(),
