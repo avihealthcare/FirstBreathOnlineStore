@@ -14,6 +14,14 @@ const ALLOWED_TYPES = new Map([
   ["image/gif", "gif"]
 ]);
 
+function detectImageExtension(bytes: Buffer) {
+  if (bytes.subarray(0, 4).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47]))) return "png";
+  if (bytes.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))) return "jpg";
+  if (bytes.subarray(0, 4).toString("ascii") === "GIF8") return "gif";
+  if (bytes.subarray(0, 4).toString("ascii") === "RIFF" && bytes.subarray(8, 12).toString("ascii") === "WEBP") return "webp";
+  return "";
+}
+
 function extensionFor(file: File) {
   const byType = ALLOWED_TYPES.get(file.type);
   if (byType) return byType;
@@ -49,14 +57,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, error: `${file.name} is larger than 5 MB.` }, { status: 400 });
     }
 
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const detectedExtension = detectImageExtension(bytes);
+
+    if (!detectedExtension) {
+      return NextResponse.json({ ok: false, error: `${file.name} is not a valid image file.` }, { status: 400 });
+    }
+
     const safeBaseName = path
       .basename(file.name, path.extname(file.name))
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "")
       .slice(0, 48);
-    const filename = `${safeBaseName || "product"}-${randomUUID()}.${extension}`;
-    const bytes = Buffer.from(await file.arrayBuffer());
+    const filename = `${safeBaseName || "product"}-${randomUUID()}.${detectedExtension || extension}`;
 
     await writeFile(path.join(uploadDir, filename), bytes);
     urls.push(`/uploads/products/${filename}`);
